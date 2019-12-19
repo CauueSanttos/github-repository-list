@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { FaGithubAlt, FaPlus, FaSpinner } from 'react-icons/fa';
+import { ToastContainer, toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 
 import api from '../../services/api';
@@ -7,11 +8,24 @@ import api from '../../services/api';
 import Container from '../../components/Container';
 import { Form, SubmitButton, List } from './styles';
 
+import 'react-toastify/dist/ReactToastify.css';
+
 export default class Main extends Component {
+  notifyError = () => toast.error('Repositório não encontrado!', {
+    position: toast.POSITION.TOP_RIGHT,
+    containerId: 'repositoryNotFound'
+  });
+
+  notifyRepositoryExists = () => toast.warn('Não é possível duplicar o repositório!', {
+    position: toast.POSITION.TOP_RIGHT,
+    containerId: 'repositoryExists'
+  });
+
   state = {
     newRepo: '',
     repositories: [],
     loading: false,
+    repoExists: true,
   };
 
   /**
@@ -45,33 +59,55 @@ export default class Main extends Component {
 
     this.setState({ loading: true });
 
-    const { newRepo, repositories } = this.state;
+    try {
+      const { newRepo, repositories } = this.state;
 
-    const response = await api.get(`/repos/${newRepo}`);
+      repositories.forEach((repo) => {
+        if (repo.name === newRepo) {
+          console.error(new Error('Repositório duplicado!'));
 
-    const data = {
-      name: response.data.full_name
+          throw "repositoryExists";
+        }
+      });
+
+      const response = await api.get(`/repos/${newRepo}`);
+
+      const data = {
+        id: response.data.id,
+        name: response.data.full_name
+      };
+
+      this.setState({
+        repositories: [...repositories, data],
+        newRepo: '',
+        repoExists: true,
+      });
+
+    } catch (err) {
+      this.setState({ repoExists: false });
+
+      if (err === 'repositoryExists') {
+        this.notifyRepositoryExists();
+      } else {
+        this.notifyError();
+      }
     }
-
-    this.setState({
-      repositories: [...repositories, data],
-      newRepo: '',
-    });
-
     this.setState({ loading: false });
   }
 
   render() {
-    const { newRepo, repositories, loading } = this.state;
+    const { newRepo, repositories, loading, repoExists } = this.state;
 
     return (
       <Container>
+        <ToastContainer enableMultiContainer containerId={'repositoryNotFound'} />
+        <ToastContainer enableMultiContainer containerId={'repositoryExists'} />
         <h1>
           <FaGithubAlt />
           Repositórios
         </h1>
 
-        <Form onSubmit={this.handleSubmit}>
+        <Form onSubmit={this.handleSubmit} repoExists={repoExists}>
           <input
             type="text"
             placeholder="Adicionar repositório"
@@ -86,7 +122,7 @@ export default class Main extends Component {
 
         <List>
           {repositories.map(repository => (
-            <li key={repository.name}>
+            <li key={String(repository.id)}>
               <span>{repository.name}</span>
               <Link to={`/repository/${encodeURIComponent(repository.name)}`}>Detalhes</Link>
             </li>

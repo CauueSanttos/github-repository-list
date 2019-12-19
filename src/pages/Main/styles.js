@@ -12,6 +12,12 @@ export const Form = styled.form`
     border-radius: 4px;
     font-size: 16px;
   }
+
+  ${props => (props.repoExists === false) && css`
+    input {
+      border-color: red;
+    }
+  `}
 `;
 
 const rotate = keyframes`

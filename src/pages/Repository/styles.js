@@ -41,6 +41,14 @@ export const Owner = styled.header`
   }
 `;
 
+export const IssueState = styled.div`
+  margin-bottom: 30px;
+
+  label {
+    color: #7159c1;
+  }
+`;
+
 export const IssueList = styled.ul`
   padding-top: 30px;
   margin-top: 30px;
